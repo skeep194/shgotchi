@@ -8,5 +8,6 @@ typedef struct User
 } User;
 
 void SetUserFromSaveFile();
+void CreateUser();
 
 #endif

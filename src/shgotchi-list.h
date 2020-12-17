@@ -3,8 +3,10 @@
 
 #include "src/shgotchi.h"
 
+int kBasePort = 60194;
+
 Shgotchi* CreateShgotchi(const char*);
 void SetShgotchiFromSaveFile();
-void Append(Shgotchi*);
+void AppendShgotchi(Shgotchi*);
 
 #endif

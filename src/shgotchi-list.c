@@ -2,7 +2,7 @@
 #include <string.h>
 #include "src/shgotchi-list.h"
 
-const int kBasePort = 60194;
+const char* kShgotchiSaveFilePath = "/.shgotchi/shgotchi.savefile";
 Shgotchi** shgotchi_list = NULL;
 int list_size;
 int max_size;
@@ -22,7 +22,7 @@ Shgotchi* CreateShgotchi(const char* name)
     return ret;
 }
 
-void Append(Shgotchi* element)
+void AppendShgotchi(Shgotchi* element)
 {
     if(shgotchi_list == NULL)
     {

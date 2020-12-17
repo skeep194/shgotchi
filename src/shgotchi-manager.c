@@ -22,11 +22,16 @@ sm shop -> UI for tamagotchi shop (use curses library)
 #include "src/user.h"
 #include "src/shgotchi-list.h"
 #include "src/shgotchi-process.h"
+#include "src/save.h"
 
 const int kCmdCount = 8;
 const char *kCmdList[] = {"help", "init", "ls", "status", "echo", "ch", "feed", "shop"};
 const int kArgcList[] = {3, 2, 2, 3, 2, 3, 2, 2};
 const char *kDirName = "/.shgotchi";
+
+extern User user;
+extern const char *kShgotchiSaveFilePath;
+extern const char *kUserSaveFilePath;
 
 typedef enum command
 {
@@ -53,10 +58,10 @@ void GameInit()
 //create save directory and game initilization
 void Init()
 {
+    char buffer[BUFSIZ];
     if(access(kDirName, F_OK) == 0)
     {
         printf("already save directory existed. Did you want new savefile? (yes, no)\n");
-        char buffer[BUFSIZ];
         int flag = 0;
         do
         {
@@ -70,12 +75,19 @@ void Init()
         assert(strcmp(buffer, "yes") == 0);
     }
     int status;
-    if((status = mkdir("/.shgotchi", 0644)) == -1)
+    if((status = mkdir(kDirName, 0644)) == -1)
         perror("shgotchi: ");
-    if((status = creat("/.shgotchi/user.savefile", 0644)) == -1)
+    if((status = creat(kUserSaveFilePath, 0644)) == -1)
         perror("shgotchi: ");
-    if((status = creat("/.shgotchi/tamagotchi.savefile", 0644)) == -1)
+    if((status = creat(kShgotchiSaveFilePath, 0644)) == -1)
         perror("shgotchi: ");
+    printf("you got a new shgotchi egg!\nenter name for your first shgotchi\n");
+    scanf("%s", buffer);
+    AppendShgotchi(CreateShgotchi(buffer));
+    user.default_shgotchi = kBasePort;
+    user.money = 0;
+    Save();
+    GameInit();
 }
 
 //convert command string to integer
@@ -100,6 +112,7 @@ void Help()
 
 int main(int argc, char *argv[])
 {
+    GameInit();
     int cmd;
     if (argc == 1 || (cmd = CmdToInt(argv[2])) == -1 || (argc == 2 && strcmp(argv[2], "help") == 0))
     {
