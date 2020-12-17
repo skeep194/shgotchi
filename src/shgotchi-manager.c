@@ -11,23 +11,71 @@ sm feed (tamagotchi) (item) -> feed item to tamagotchi
 sm shop -> UI for tamagotchi shop (use curses library)
 */
 
+#include <assert.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "src/shgotchi.h"
+#include "src/user.h"
+#include "src/shgotchi-list.h"
+#include "src/shgotchi-process.h"
 
 const int kCmdCount = 8;
 const char *kCmdList[] = {"help", "init", "ls", "status", "echo", "ch", "feed", "shop"};
 const int kArgcList[] = {3, 2, 2, 3, 2, 3, 2, 2};
+const char *kDirName = "/.shgotchi";
+
+typedef enum command
+{
+    help = 0,
+    init,
+    ls,
+    status,
+    echo,
+    ch,
+    feed,
+    shop
+}command;
+
+void GameInit()
+{
+    if(access(kDirName, F_OK) == 0)
+    {
+        SetUserFromSaveFile();
+        SetShgotchiFromSaveFile();
+        //TODO: 소켓 확인한 후 닫혀있으면 프로세스 생성, 열려있으면 소켓 연결
+    }
+}
 
 //create save directory and game initilization
 void Init()
 {
-}
-
-void CreateShgotchi()
-{
+    if(access(kDirName, F_OK) == 0)
+    {
+        printf("already save directory existed. Did you want new savefile? (yes, no)\n");
+        char buffer[BUFSIZ];
+        int flag = 0;
+        do
+        {
+            if(flag)
+                printf("wrong value %s, yes or no expected.\n", buffer);
+            flag = 1;
+            scanf("%s", buffer);
+        } while (strcmp(buffer, "yes") != 0 && strcmp(buffer, "no") != 0);
+        if(strcmp(buffer, "no") == 0)
+            return;
+        assert(strcmp(buffer, "yes") == 0);
+    }
+    int status;
+    if((status = mkdir("/.shgotchi", 0644)) == -1)
+        perror("shgotchi: ");
+    if((status = creat("/.shgotchi/user.savefile", 0644)) == -1)
+        perror("shgotchi: ");
+    if((status = creat("/.shgotchi/tamagotchi.savefile", 0644)) == -1)
+        perror("shgotchi: ");
 }
 
 //convert command string to integer
@@ -65,15 +113,15 @@ int main(int argc, char *argv[])
     }
     switch (CmdToInt(argv[2]))
     {
-    case 0:
+    case init:
         Init();
         break;
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
+    case ls:
+    case status:
+    case echo:
+    case ch:
+    case feed:
+    case shop:
     default:
         Help();
     }
