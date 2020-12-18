@@ -13,6 +13,7 @@ typedef struct Shgotchi
 } Shgotchi;
 
 int CreateShgotchi(const char* name);
+const char* LevelToKorean(int level);
 void GetShgotchiByPort(int port, Shgotchi* buf);
 
 #endif

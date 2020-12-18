@@ -31,6 +31,12 @@ int CreateShgotchi(const char* name)
     return ret->port;
 }
 
+const char* LevelToKorean(int level)
+{
+    const char* convert[4] = {"알", "유아기", "성장기", "성체"};
+    return convert[level];
+}
+
 void GetShgotchiByPort(int port, Shgotchi* buf)
 {
     char path[256];

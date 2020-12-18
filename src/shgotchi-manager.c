@@ -97,6 +97,10 @@ void GameInit()
             sock_list[i] = clnt_sock;
         }
     }
+    else
+    {
+        printf("save directory isn't exist. please execute shgotchi init\n");
+    }
 }
 
 //create save directory and game initilization
@@ -105,7 +109,7 @@ void Init()
     char buffer[BUFSIZ];
     if(access(kDirName, F_OK) == 0)
     {
-        printf("already save directory existed. Did you want new savefile? (yes, no)\n");
+        printf("already save directory existed. Did you want delete? (yes, no)\n");
         int flag = 0;
         do
         {
@@ -119,6 +123,8 @@ void Init()
             return;
         assert(strcmp(buffer, "yes") == 0);
         system("rm -rf /.shgotchi");
+        system("killall shgotchi");
+        return;
     }
     int status;
     if((status = mkdir(kDirName, 0755)) == -1)
@@ -134,7 +140,6 @@ void Init()
     user.default_shgotchi = kBasePort;
     user.money = 1000;
     Save(kUserSaveFilePath, &user, sizeof(User));
-    GameInit();
 }
 
 void Ls()
@@ -150,7 +155,18 @@ void Ls()
 
 void Status(char name[256])
 {
-
+    Shgotchi buf;
+    for(int i=0;i<list_size;++i)
+    {
+        write(sock_list[i], "info", sizeof("info"));
+        read(sock_list[i], &buf, sizeof(Shgotchi));
+        if(strcmp(buf.name, name) == 0)
+        {
+            printf("%s\n%s\n이름: %s\n배고픔: %d/%d\n", buf.face, LevelToKorean(buf.level), buf.name, buf.hungry, buf.max_hungry);
+            return;
+        }
+    }
+    printf("%s isn't exist\n");
 }
 
 void Echo()
@@ -170,7 +186,20 @@ void Echo()
 
 void Ch(char name[256])
 {
-
+    Shgotchi buf;
+    for(int i=0;i<list_size;++i)
+    {
+        write(sock_list[i], "info", sizeof("info"));
+        read(sock_list[i], &buf, sizeof(Shgotchi));
+        if(strcmp(buf.name, name) == 0)
+        {
+            printf("change default shgotchi to %s\n", name);
+            user.default_shgotchi = buf.port;
+            Save(kUserSaveFilePath, &user, sizeof(User));
+            return;
+        }
+    }
+    printf("%s isn't exist\n");
 }
 
 void Feed(char shgotchi_name[256], char item_name[256])
@@ -205,7 +234,6 @@ void Help()
 
 int main(int argc, char *argv[])
 {
-    GameInit();
     int cmd;
     if (argc == 1 || (cmd = CmdToInt(argv[1])) == -1 || (argc == 2 && strcmp(argv[1], "help") == 0))
     {
@@ -217,6 +245,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "%s command expect number of argument %d but given %d\n", argv[1], kArgcList[CmdToInt(argv[1])] - 2, argc - 2);
         exit(1);
     }
+    if(CmdToInt(argv[1]) != init)
+        GameInit();
     switch (CmdToInt(argv[1]))
     {
     case init:
