@@ -19,10 +19,10 @@ sm shop -> UI for tamagotchi shop (use curses library)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "src/user.h"
-#include "src/shgotchi-list.h"
-#include "src/shgotchi-process.h"
-#include "src/save.h"
+#include "user.h"
+#include "shgotchi-list.h"
+#include "shgotchi-process.h"
+#include "save.h"
 
 const int kCmdCount = 8;
 const char *kCmdList[] = {"help", "init", "ls", "status", "echo", "ch", "feed", "shop"};
@@ -32,6 +32,7 @@ const char *kDirName = "/.shgotchi";
 extern User user;
 extern const char *kShgotchiSaveFilePath;
 extern const char *kUserSaveFilePath;
+extern const int kBasePort;
 
 typedef enum command
 {
@@ -50,7 +51,7 @@ void GameInit()
     if(access(kDirName, F_OK) == 0)
     {
         SetUserFromSaveFile();
-        SetShgotchiFromSaveFile();
+        // SetShgotchiFromSaveFile();
         //TODO: 소켓 확인한 후 닫혀있으면 프로세스 생성, 열려있으면 소켓 연결
     }
 }

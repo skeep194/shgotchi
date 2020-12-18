@@ -1,8 +1,8 @@
 #include <fcntl.h>
 #include <unistd.h>
-#include "src/save.h"
-#include "src/shgotchi-list.h"
-#include "src/user.h"
+#include "save.h"
+#include "shgotchi-list.h"
+#include "user.h"
 
 extern Shgotchi** shgotchi_list;
 extern int list_size;

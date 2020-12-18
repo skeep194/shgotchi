@@ -1,6 +1,6 @@
 #include <sys/types.h>
 #include <unistd.h>
-#include "src/shgotchi-process.h"
+#include "shgotchi-process.h"
 
 void CreateShgotchiProcess(Shgotchi* element)
 {

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "src/user.h"
+#include "user.h"
 
 const char* kUserSaveFilePath = "/.shgotchi/user.savefile";
 User user;

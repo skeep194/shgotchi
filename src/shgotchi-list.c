@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
-#include "src/shgotchi-list.h"
+#include "shgotchi-list.h"
 
+const int kBasePort = 60194;
 const char* kShgotchiSaveFilePath = "/.shgotchi/shgotchi.savefile";
 Shgotchi** shgotchi_list = NULL;
 int list_size;

@@ -1,9 +1,7 @@
 #ifndef SHGOTCHI_LIST_H
 #define SHGOTCHI_LIST_H
 
-#include "src/shgotchi.h"
-
-int kBasePort = 60194;
+#include "shgotchi.h"
 
 Shgotchi* CreateShgotchi(const char*);
 void SetShgotchiFromSaveFile();
