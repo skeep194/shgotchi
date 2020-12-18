@@ -11,12 +11,14 @@
 
 extern const char* kShgotchiSaveDirPath;
 Shgotchi shgotchi;
+int serv_sock;
 
 void ShgotchiPause(int signum)
 {
     char path[256];
     sprintf(path, "%s%d", kShgotchiSaveDirPath, shgotchi.port);
     Save(path, &shgotchi, sizeof(Shgotchi));
+    close(serv_sock);
     exit(0);
 }
 
@@ -25,16 +27,19 @@ void CreateShgotchiProcess(int port)
     pid_t pid = fork();
     if(pid == 0)
     {
-        //SIGINT 시그널을 받을 경우 세이브하고 종료
+        //SIGINT, SIGTERM 시그널을 받을 경우 세이브하고 종료
         signal(SIGINT, ShgotchiPause);
+        signal(SIGTERM, ShgotchiPause);
         //소켓 통신을 위한 서버 프로그램
         //각각의 shgotchi가 하나의 소켓 서버
-        int serv_sock = socket(PF_INET, SOCK_STREAM, 0);
+        serv_sock = socket(PF_INET, SOCK_STREAM, 0);
         if(serv_sock == -1)
         {
             fprintf(stderr, "socket error\n");
             exit(1);
         }
+        int opt = 1;
+        setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         struct sockaddr_in serv_addr;
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
@@ -55,6 +60,7 @@ void CreateShgotchiProcess(int port)
         socklen_t clnt_addr_size = sizeof(clnt_addr);
         while(1)
         {
+            GetShgotchiByPort(port, &shgotchi);
             int clnt_sock = accept(serv_sock, (struct sockaddr*)&clnt_addr, &clnt_addr_size);
             if(clnt_sock == -1)
             {
@@ -71,7 +77,17 @@ void CreateShgotchiProcess(int port)
             #ifdef DEBUG
                 printf("%s\n", readbuf);
             #endif
+            //assert read data is string
+            readbuf[BUFSIZ-1] = 0;
+            if(strcmp(readbuf, "info") == 0)
+            {
+                write(clnt_sock, &shgotchi, sizeof(Shgotchi));
+            }
             close(clnt_sock);
+            char path[256];
+            sprintf(path, "%s%d", kShgotchiSaveDirPath, port);
+            Save(path, &shgotchi, sizeof(Shgotchi));
         }
+        close(serv_sock);
     }
 }

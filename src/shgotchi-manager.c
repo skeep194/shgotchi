@@ -9,6 +9,7 @@ shgotchi echo -> print default tamagotchi's face (shell view)
 shgotchi ch 1 -> change default tamagotchi to 1
 shgotchi feed (tamagotchi) (item) -> feed item to tamagotchi
 shgotchi shop -> UI for tamagotchi shop (use curses library)
+shgotchi stop 1 -> stop tamagotchi 1 process
 */
 
 #include <assert.h>
@@ -38,6 +39,8 @@ extern User user;
 extern const char *kShgotchiSaveDirPath;
 extern const char *kUserSaveFilePath;
 extern const int kBasePort;
+extern int* shgotchi_list;
+extern int list_size;
 
 typedef enum command
 {
@@ -58,15 +61,13 @@ void GameInit()
         SetUserFromSaveFile();
         SetShgotchiFromSaveFile();
         //소켓 확인한 후 닫혀있으면 프로세스 생성, 열려있으면 소켓 연결
-        extern int* shgotchi_list;
-        extern int list_size;
         for(int i=0;i<list_size;++i)
         {
             int port = shgotchi_list[i];
             int clnt_sock = socket(PF_INET, SOCK_STREAM, 0);
             if(clnt_sock == -1)
             {
-                fprintf(stderr, "socket error\n");
+                fprintf(stderr, "shgotchi-manager: socket error\n");
                 exit(1);
             }
             struct sockaddr_in serv_addr;
@@ -81,21 +82,18 @@ void GameInit()
                 #endif
                 CreateShgotchiProcess(port);
                 //문제: 자식 프로세스에서 소켓을 열기 때문에 부모 프로세스에서 연결을 바로 시도하면 커넥션 에러가 항상 발생함
-                //해결: 5초동안 0.1초 간격으로 시도해보고 안되면 커넥션 에러.. 뭔가 깔끔한 방법이 없는걸까?
+                //해결: 5초동안 시도해보고 안되면 커넥션 에러.. 뭔가 깔끔한 방법이 없는걸까?
                 int cnt = 0;
                 while(connect(clnt_sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == -1)
                 {
-                    if(cnt++ == 50)
+                    if(cnt++ == 5000)
                     {
-                        fprintf(stderr, "socket connection error\n");
+                        fprintf(stderr, "shgotchi-manager: socket connection error\n");
+                        break;
                     }
-                    usleep(100);
+                    usleep(1000);
                 }
             }
-            #ifdef DEBUG
-                const char* test = "test";
-                write(clnt_sock, test, sizeof(test));
-            #endif
             sock_list[i] = clnt_sock;
         }
     }
@@ -141,25 +139,41 @@ void Init()
 
 void Ls()
 {
-
+    Shgotchi buf;
+    for(int i=0;i<list_size;++i)
+    {
+        write(sock_list[i], "info", sizeof("info"));
+        read(sock_list[i], &buf, sizeof(Shgotchi));
+        printf("%s\n", buf.name);
+    }
 }
 
-void Status()
+void Status(char name[256])
 {
 
 }
 
 void Echo()
 {
-
+    Shgotchi buf;
+    for(int i=0;i<list_size;++i)
+    {
+        if(shgotchi_list[i] == user.default_shgotchi)
+        {
+            write(sock_list[i], "info", sizeof("info"));
+            read(sock_list[i], &buf, sizeof(Shgotchi));
+            printf("%s\n", buf.face);
+            return;
+        }
+    }
 }
 
-void Ch()
+void Ch(char name[256])
 {
 
 }
 
-void Feed()
+void Feed(char shgotchi_name[256], char item_name[256])
 {
 
 }
@@ -212,16 +226,16 @@ int main(int argc, char *argv[])
         Ls();
         break;
     case status:
-        Status();
+        Status(argv[2]);
         break;
     case echo:
         Echo();
         break;
     case ch:
-        Ch();
+        Ch(argv[2]);
         break;
     case feed:
-        Feed();
+        Feed(argv[2], argv[3]);
         break;
     case shop:
         Shop();

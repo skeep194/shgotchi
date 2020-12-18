@@ -9,6 +9,7 @@
 
 const int kBasePort = 60194;
 const char* kShgotchiSaveDirPath = "/.shgotchi/shgotchi/";
+extern int list_size;
 
 int CreateShgotchi(const char* name)
 {
@@ -19,8 +20,7 @@ int CreateShgotchi(const char* name)
     strcpy(ret->face, "@");
     ret->max_hungry = 5;
     ret->level = 0;
-    ret->isDie = 0;
-    ret->port = kBasePort + ret->id;
+    ret->port = kBasePort + list_size;
     strcpy(ret->name, name);
     //shgotchi to savefile
     char path[256];
@@ -31,23 +31,14 @@ int CreateShgotchi(const char* name)
     return ret->port;
 }
 
-//deprecated
-Shgotchi* GetShgotchiByPort(int port)
+void GetShgotchiByPort(int port, Shgotchi* buf)
 {
-    DIR* dir = opendir(kShgotchiSaveDirPath);
-    struct dirent* buf;
-    while((buf = readdir(dir)) != NULL)
+    char path[256];
+    sprintf(path, "%s%d", kShgotchiSaveDirPath, port);
+    int fd = open(path, O_RDONLY);
+    if(fd == -1)
     {
-        if(atoi(buf->d_name) == port)
-        {
-            Shgotchi* here = malloc(sizeof(Shgotchi));
-            char path[256];
-            sprintf(path, "%s%s", kShgotchiSaveDirPath, buf->d_name);
-            int fd = open(path, O_RDONLY);
-            read(fd, here, sizeof(Shgotchi));
-            close(fd);
-            return here;
-        }
+        perror("shgotchi ");
     }
-    return NULL;
+    read(fd, buf, sizeof(Shgotchi));
 }

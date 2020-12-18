@@ -3,18 +3,16 @@
 
 typedef struct Shgotchi
 {
-    char face[10];
+    char face[20];
     char name[255];
-    int id;
     int level;
     int care_miss;
     int hungry;
     int max_hungry;
-    int isDie;
     int port;
 } Shgotchi;
 
 int CreateShgotchi(const char* name);
-Shgotchi* GetShgotchiByPort(int port);
+void GetShgotchiByPort(int port, Shgotchi* buf);
 
 #endif
