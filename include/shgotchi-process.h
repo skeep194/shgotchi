@@ -3,6 +3,6 @@
 
 #include "shgotchi.h"
 
-void CreateShgotchiProcess(Shgotchi* element);
+void CreateShgotchiProcess(int port);
 
 #endif

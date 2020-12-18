@@ -15,6 +15,8 @@ int max_size;
 
 void AppendShgotchiPort(int element)
 {
+    if(element < kBasePort)
+        return;
     if(shgotchi_list == NULL)
     {
         shgotchi_list = malloc(sizeof(int)*2);
