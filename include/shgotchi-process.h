@@ -3,6 +3,6 @@
 
 #include "shgotchi.h"
 
-void CreateShgotchiProcess(Shgotchi*);
+void CreateShgotchiProcess(Shgotchi* element);
 
 #endif

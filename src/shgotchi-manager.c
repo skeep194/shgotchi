@@ -20,6 +20,7 @@ sm shop -> UI for tamagotchi shop (use curses library)
 #include <stdlib.h>
 #include <string.h>
 #include "user.h"
+#include "shgotchi.h"
 #include "shgotchi-list.h"
 #include "shgotchi-process.h"
 #include "save.h"
@@ -30,7 +31,7 @@ const int kArgcList[] = {3, 2, 2, 3, 2, 3, 2, 2};
 const char *kDirName = "/.shgotchi";
 
 extern User user;
-extern const char *kShgotchiSaveFilePath;
+extern const char *kShgotchiSaveDirPath;
 extern const char *kUserSaveFilePath;
 extern const int kBasePort;
 
@@ -51,8 +52,15 @@ void GameInit()
     if(access(kDirName, F_OK) == 0)
     {
         SetUserFromSaveFile();
-        // SetShgotchiFromSaveFile();
+        SetShgotchiFromSaveFile();
         //TODO: 소켓 확인한 후 닫혀있으면 프로세스 생성, 열려있으면 소켓 연결
+        extern int* shgotchi_list;
+        extern int list_size;
+        for(int i=0;i<list_size;++i)
+        {
+            int port = shgotchi_list[i];
+
+        }
     }
 }
 
@@ -69,25 +77,28 @@ void Init()
             if(flag)
                 printf("wrong value %s, yes or no expected.\n", buffer);
             flag = 1;
-            scanf("%s", buffer);
+            fgets(buffer, sizeof(buffer), stdin);
+            buffer[strlen(buffer)-1] = 0;
         } while (strcmp(buffer, "yes") != 0 && strcmp(buffer, "no") != 0);
         if(strcmp(buffer, "no") == 0)
             return;
         assert(strcmp(buffer, "yes") == 0);
+        system("rm -rf /.shgotchi");
     }
     int status;
-    if((status = mkdir(kDirName, 0644)) == -1)
-        perror("shgotchi: ");
+    if((status = mkdir(kDirName, 0755)) == -1)
+        perror("shgotchi ");
     if((status = creat(kUserSaveFilePath, 0644)) == -1)
-        perror("shgotchi: ");
-    if((status = creat(kShgotchiSaveFilePath, 0644)) == -1)
-        perror("shgotchi: ");
+        perror("shgotchi ");
+    if((status = mkdir(kShgotchiSaveDirPath, 0755)) == -1)
+        perror("shgotchi ");
     printf("you got a new shgotchi egg!\nenter name for your first shgotchi\n");
-    scanf("%s", buffer);
-    AppendShgotchi(CreateShgotchi(buffer));
+    fgets(buffer, sizeof(buffer), stdin);
+    buffer[strlen(buffer)-1] = 0;
+    AppendShgotchiPort(CreateShgotchi(buffer));
     user.default_shgotchi = kBasePort;
-    user.money = 0;
-    Save();
+    user.money = 1000;
+    Save(kUserSaveFilePath, &user, sizeof(User));
     GameInit();
 }
 
@@ -115,27 +126,33 @@ int main(int argc, char *argv[])
 {
     GameInit();
     int cmd;
-    if (argc == 1 || (cmd = CmdToInt(argv[2])) == -1 || (argc == 2 && strcmp(argv[2], "help") == 0))
+    if (argc == 1 || (cmd = CmdToInt(argv[1])) == -1 || (argc == 2 && strcmp(argv[1], "help") == 0))
     {
         Help();
         return 0;
     }
-    if (kArgcList[CmdToInt(argv[2])] != argc)
+    if (kArgcList[CmdToInt(argv[1])] != argc)
     {
-        fprintf(stderr, "%s command expect number of argument %d but given %d", argv[2], kArgcList[CmdToInt(argv[2])] - 2, argc - 2);
+        fprintf(stderr, "%s command expect number of argument %d but given %d\n", argv[1], kArgcList[CmdToInt(argv[1])] - 2, argc - 2);
         exit(1);
     }
-    switch (CmdToInt(argv[2]))
+    switch (CmdToInt(argv[1]))
     {
     case init:
         Init();
         break;
     case ls:
+        break;
     case status:
+        break;
     case echo:
+        break;
     case ch:
+        break;
     case feed:
+        break;
     case shop:
+        break;
     default:
         Help();
     }

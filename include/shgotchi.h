@@ -14,4 +14,7 @@ typedef struct Shgotchi
     int port;
 } Shgotchi;
 
+int CreateShgotchi(const char* name);
+Shgotchi* GetShgotchiByPort(int port);
+
 #endif

@@ -1,39 +1,39 @@
+//각 shgotchi의 포트 번호 저장
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <unistd.h>
 #include "shgotchi-list.h"
+#include "shgotchi.h"
 
-const int kBasePort = 60194;
-const char* kShgotchiSaveFilePath = "/.shgotchi/shgotchi.savefile";
-Shgotchi** shgotchi_list = NULL;
+extern const int kBasePort;
+extern const char* kShgotchiSaveDirPath;
+int* shgotchi_list = NULL;
 int list_size;
 int max_size;
 
-Shgotchi* CreateShgotchi(const char* name)
-{
-    Shgotchi* ret = malloc(sizeof(Shgotchi));
-    ret->care_miss = 0;
-    ret->hungry = 5;
-    ret->id = list_size;
-    strcpy(ret->face, "@");
-    ret->max_hungry = 5;
-    ret->level = 0;
-    ret->isDie = 0;
-    ret->port = kBasePort + ret->id;
-    strcpy(ret->name, name);
-    return ret;
-}
-
-void AppendShgotchi(Shgotchi* element)
+void AppendShgotchiPort(int element)
 {
     if(shgotchi_list == NULL)
     {
-        shgotchi_list = malloc(sizeof(Shgotchi*)*2);
+        shgotchi_list = malloc(sizeof(int)*2);
         max_size = 2;
     }
     if(list_size == max_size)
     {
-        shgotchi_list = realloc(shgotchi_list, sizeof(Shgotchi*) * max_size*2);
+        shgotchi_list = realloc(shgotchi_list, sizeof(int) * max_size*2);
         max_size *= 2;
     }
     shgotchi_list[list_size++] = element;
+}
+
+void SetShgotchiFromSaveFile()
+{
+    DIR* dir = opendir(kShgotchiSaveDirPath);
+    struct dirent* buf;
+    while((buf = readdir(dir)) != NULL)
+    {
+        AppendShgotchiPort(atoi(buf->d_name));
+    }
 }
