@@ -38,4 +38,5 @@ void SetShgotchiFromSaveFile()
     {
         AppendShgotchiPort(atoi(buf->d_name));
     }
+    closedir(dir);
 }

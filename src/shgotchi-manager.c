@@ -7,9 +7,8 @@ shgotchi ls -> print tamagotchi list
 shgotchi status 1 -> print 1's status (tamagotchi parameter)
 shgotchi echo -> print default tamagotchi's face (shell view)
 shgotchi ch 1 -> change default tamagotchi to 1
-shgotchi feed (tamagotchi) (item) -> feed item to tamagotchi
+shgotchi feed (tamagotchi) -> feed tamagotchi
 shgotchi shop -> UI for tamagotchi shop (use curses library)
-shgotchi stop 1 -> stop tamagotchi 1 process
 */
 
 #include <assert.h>
@@ -22,22 +21,28 @@ shgotchi stop 1 -> stop tamagotchi 1 process
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <time.h>
 #include "user.h"
 #include "shgotchi.h"
 #include "shgotchi-list.h"
 #include "shgotchi-process.h"
 #include "save.h"
 
+#define MIN(x,y) ( (x)<(y)?(x):(y) )
+
 const int kCmdCount = 8;
 const char *kCmdList[] = {"help", "init", "ls", "status", "echo", "ch", "feed", "shop"};
-const int kArgcList[] = {3, 2, 2, 3, 2, 3, 2, 2};
+const int kArgcList[] = {3, 2, 2, 3, 2, 3, 3, 2};
 const char *kDirName = "/.shgotchi";
 
 int sock_list[100];
+int isWrite[100];
+int socket_open[100];
 
 extern User user;
 extern const char *kShgotchiSaveDirPath;
 extern const char *kUserSaveFilePath;
+extern const int kMaxExp[4];
 extern const int kBasePort;
 extern int* shgotchi_list;
 extern int list_size;
@@ -95,11 +100,12 @@ void GameInit()
                 }
             }
             sock_list[i] = clnt_sock;
+            socket_open[i] = 1;
         }
     }
     else
     {
-        printf("save directory isn't exist. please execute shgotchi init\n");
+        printf("세이브 디렉토리가 존재하지 않습니다. shgotchi init을 실행 해주세요.\n");
     }
 }
 
@@ -109,12 +115,12 @@ void Init()
     char buffer[BUFSIZ];
     if(access(kDirName, F_OK) == 0)
     {
-        printf("already save directory existed. Did you want delete? (yes, no)\n");
+        printf("세이브 디렉토리가 이미 존재합니다. 디렉토리를 지우겠습니까? (yes, no)\n");
         int flag = 0;
         do
         {
             if(flag)
-                printf("wrong value %s, yes or no expected.\n", buffer);
+                printf("yes 혹은 no만 입력할 수 있습니다.\n", buffer);
             flag = 1;
             fgets(buffer, sizeof(buffer), stdin);
             buffer[strlen(buffer)-1] = 0;
@@ -124,21 +130,22 @@ void Init()
         assert(strcmp(buffer, "yes") == 0);
         system("rm -rf /.shgotchi");
         system("killall shgotchi");
-        return;
+        exit(0);
     }
     int status;
     if((status = mkdir(kDirName, 0755)) == -1)
         perror("shgotchi ");
-    if((status = creat(kUserSaveFilePath, 0644)) == -1)
+    if((status = creat(kUserSaveFilePath, 0666)) == -1)
         perror("shgotchi ");
     if((status = mkdir(kShgotchiSaveDirPath, 0755)) == -1)
         perror("shgotchi ");
-    printf("you got a new shgotchi egg!\nenter name for your first shgotchi\n");
+    printf("첫 다마고치의 이름은?\n");
     fgets(buffer, sizeof(buffer), stdin);
     buffer[strlen(buffer)-1] = 0;
     AppendShgotchiPort(CreateShgotchi(buffer));
     user.default_shgotchi = kBasePort;
     user.money = 1000;
+    user.food = 0;
     Save(kUserSaveFilePath, &user, sizeof(User));
 }
 
@@ -149,6 +156,7 @@ void Ls()
     {
         write(sock_list[i], "info", sizeof("info"));
         read(sock_list[i], &buf, sizeof(Shgotchi));
+        isWrite[i] = 1;
         printf("%s\n", buf.name);
     }
 }
@@ -160,13 +168,17 @@ void Status(char name[256])
     {
         write(sock_list[i], "info", sizeof("info"));
         read(sock_list[i], &buf, sizeof(Shgotchi));
+        isWrite[i] = 1;
         if(strcmp(buf.name, name) == 0)
         {
-            printf("%s\n%s\n이름: %s\n배고픔: %d/%d\n", buf.face, LevelToKorean(buf.level), buf.name, buf.hungry, buf.max_hungry);
+            if(buf.isDie)
+                printf("%s는 죽었다...\n", buf.name);
+            else
+                printf("%s\n%s\n이름: %s\n배고픔: %d/%d\n경험치: %d/%d\n", GetShgotchiFace(&buf), LevelToKorean(buf.level), buf.name, buf.hungry, buf.max_hungry, buf.exp, kMaxExp[buf.level]);
             return;
         }
     }
-    printf("%s isn't exist\n");
+    printf("%s는 존재하지 않는다.\n");
 }
 
 void Echo()
@@ -178,7 +190,8 @@ void Echo()
         {
             write(sock_list[i], "info", sizeof("info"));
             read(sock_list[i], &buf, sizeof(Shgotchi));
-            printf("%s\n", buf.face);
+            isWrite[i] = 1;
+            printf("%s\n", GetShgotchiFace(&buf));
             return;
         }
     }
@@ -191,25 +204,90 @@ void Ch(char name[256])
     {
         write(sock_list[i], "info", sizeof("info"));
         read(sock_list[i], &buf, sizeof(Shgotchi));
+        isWrite[i] = 1;
         if(strcmp(buf.name, name) == 0)
         {
-            printf("change default shgotchi to %s\n", name);
+            printf("기본 다마고치가 %s로 변경되었다.\n", name);
             user.default_shgotchi = buf.port;
             Save(kUserSaveFilePath, &user, sizeof(User));
             return;
         }
     }
-    printf("%s isn't exist\n");
+    printf("%s는 존재하지 않는다.\n");
 }
 
-void Feed(char shgotchi_name[256], char item_name[256])
+void Feed(char shgotchi_name[256])
 {
-
+    if(user.food > 0)
+    {
+        Shgotchi buf;
+        for(int i=0;i<list_size;++i)
+        {
+            write(sock_list[i], "info", sizeof("info"));
+            read(sock_list[i], &buf, sizeof(Shgotchi));
+            isWrite[i] = 1;
+            if(strcmp(buf.name, shgotchi_name) == 0)
+            {
+                if(buf.isDie)
+                    printf("%s는 죽어서 먹이를 줄 수 없다...\n", buf.name);
+                else
+                {
+                    printf("%s에게 먹이를 주었다.\n", buf.name);
+                    user.food -= 1;
+                    buf.hungry = MIN(buf.max_hungry, buf.hungry + 3);
+                    Save(kUserSaveFilePath, &user, sizeof(User));
+                    char path[256];
+                    sprintf(path, "%s%d", kShgotchiSaveDirPath, buf.port);
+                    Save(path, &buf, sizeof(Shgotchi));
+                }
+                return;
+            }
+        }
+        printf("%s는 존재하지 않는다.\n", buf.name);
+    }
+    else
+    {
+        printf("먹이가 없습니다. 상점에서 먹이를 구입하세요.\n");
+    }
 }
 
 void Shop()
 {
-
+    printf("다마고치 상점! 당신은 %d원을 가지고 있다.\n", user.money);
+    printf("구입할 항목의 숫자를 입력해 주세요.\n");
+    printf("1. 먹이 (100)\n");
+    printf("2. 다마고치 알 (500)\n");
+    int num;
+    scanf("%d", &num);
+    switch(num)
+    {
+        case 1:
+            if(user.money >= 100)
+            {
+                user.money -= 100;
+                user.food += 1;
+                printf("먹이를 성공적으로 구입했습니다!\n");
+            }
+            else
+            {
+                printf("먹이를 구입하기에는 돈이 부족합니다.\n");
+            }
+            break;
+        case 2:
+            if(user.money >= 500)
+            {
+                user.money -= 500;
+                printf("새 다마고치의 이름은?\n");
+                char buffer[BUFSIZ];
+                //개행문자가 버퍼에 남아있는데 더 깔끔하게 처리 못하겠다..
+                scanf(" %[^\n]", buffer);
+                AppendShgotchiPort(CreateShgotchi(buffer));
+            }
+            break;
+        default:
+            printf("잘못된 숫자입니다.\n");
+    }
+    Save(kUserSaveFilePath, &user, sizeof(User));
 }
 
 //convert command string to integer
@@ -226,6 +304,19 @@ int CmdToInt(const char *cmd)
     return -1;
 }
 
+void reset()
+{
+    Shgotchi buf;
+    for(int i=0;i<list_size;++i)
+    {
+        if(socket_open[i] && !isWrite[i])
+        {
+            write(sock_list[i], "info", sizeof("info"));
+            read(sock_list[i], &buf, sizeof(Shgotchi));
+        }
+    }
+}
+
 //print help message of shgotchi-manager
 void Help()
 {
@@ -234,6 +325,7 @@ void Help()
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
     int cmd;
     if (argc == 1 || (cmd = CmdToInt(argv[1])) == -1 || (argc == 2 && strcmp(argv[1], "help") == 0))
     {
@@ -265,7 +357,7 @@ int main(int argc, char *argv[])
         Ch(argv[2]);
         break;
     case feed:
-        Feed(argv[2], argv[3]);
+        Feed(argv[2]);
         break;
     case shop:
         Shop();
@@ -273,5 +365,13 @@ int main(int argc, char *argv[])
     default:
         Help();
     }
+    if(rand()%10 == 0)
+    {
+        int num = rand()%300;
+        printf("%d원을 발견했다.\n", num);
+        user.money += num;
+        Save(kUserSaveFilePath, &user, sizeof(User));
+    }
+    reset();
     return 0;
 }

@@ -4,6 +4,7 @@
 typedef struct User 
 {
     int default_shgotchi;
+    int food;
     int money;
 } User;
 

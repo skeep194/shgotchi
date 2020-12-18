@@ -3,17 +3,20 @@
 
 typedef struct Shgotchi
 {
-    char face[20];
     char name[255];
     int level;
+    int exp;
     int care_miss;
     int hungry;
     int max_hungry;
     int port;
+    int hungry_timer;
+    int isDie;
 } Shgotchi;
 
 int CreateShgotchi(const char* name);
 const char* LevelToKorean(int level);
 void GetShgotchiByPort(int port, Shgotchi* buf);
+const char* GetShgotchiFace(Shgotchi* shgotchi);
 
 #endif

@@ -10,8 +10,10 @@
 #include "shgotchi-process.h"
 
 extern const char* kShgotchiSaveDirPath;
+extern const int kMaxExp[4];
 Shgotchi shgotchi;
 int serv_sock;
+int port_num;
 
 void ShgotchiPause(int signum)
 {
@@ -22,14 +24,70 @@ void ShgotchiPause(int signum)
     exit(0);
 }
 
+void SetHungry(int signum)
+{
+    #ifdef DEBUG
+        printf("alarm call\n");
+    #endif
+    GetShgotchiByPort(port_num, &shgotchi);
+    #ifdef DEBUG
+    printf("%d %d %d %d\n", shgotchi.hungry_timer, shgotchi.exp, shgotchi.level, shgotchi.hungry);
+    #endif
+    //TODO: 다시 살피기
+    if(shgotchi.isDie)
+        exit(0);
+    if(--shgotchi.hungry_timer <= 0)
+    {
+        if(shgotchi.hungry > 0)
+        {
+            shgotchi.hungry -= 1;
+        }
+        else
+        {
+            shgotchi.care_miss += 1;
+            if(shgotchi.care_miss >= 3)
+            {
+                printf("\n오랫동안 먹이를 주지 않아 %s는 아사했다...\n", shgotchi.name);
+                shgotchi.isDie = 1;
+            }
+            else if(shgotchi.care_miss == 2)
+            {
+                printf("\n%s: 이러다가 굶어 죽겠어요!!!\n", shgotchi.name);
+            }
+            else if(shgotchi.care_miss == 1)
+            {
+                printf("\n%s: 배고파요..ㅠㅠ\n", shgotchi.name);
+            }
+        }
+        shgotchi.hungry_timer = 10;
+    }
+    if(++shgotchi.exp == kMaxExp[shgotchi.level])
+    {
+        printf("\n%s는 %s에서 %s로 성장했다!\n", shgotchi.name, LevelToKorean(shgotchi.level), LevelToKorean(shgotchi.level+1));
+        shgotchi.level += 1;
+        shgotchi.max_hungry *= 2;
+    }
+    #ifdef DEBUG
+    printf("%d %d %d %d\n", shgotchi.hungry_timer, shgotchi.exp, shgotchi.level, shgotchi.hungry);
+    #endif
+    char path[256];
+    sprintf(path, "%s%d", kShgotchiSaveDirPath, port_num);
+    Save(path, &shgotchi, sizeof(Shgotchi));
+    alarm(1);
+}
+
 void CreateShgotchiProcess(int port)
 {
     pid_t pid = fork();
     if(pid == 0)
     {
+        port_num = port;
         //SIGINT, SIGTERM 시그널을 받을 경우 세이브하고 종료
         signal(SIGINT, ShgotchiPause);
         signal(SIGTERM, ShgotchiPause);
+        //1초마다 배고픔 게이지 체크
+        alarm(1);
+        signal(SIGALRM, SetHungry);
         //소켓 통신을 위한 서버 프로그램
         //각각의 shgotchi가 하나의 소켓 서버
         serv_sock = socket(PF_INET, SOCK_STREAM, 0);
