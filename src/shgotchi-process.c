@@ -144,7 +144,6 @@ void CreateShgotchiProcess(int port)
             close(clnt_sock);
             char path[256];
             sprintf(path, "%s%d", kShgotchiSaveDirPath, port);
-            Save(path, &shgotchi, sizeof(Shgotchi));
         }
         close(serv_sock);
     }

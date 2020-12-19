@@ -17,6 +17,9 @@ void Save(const char* path, void* buffer, size_t bufsize)
     int fd = open(path, O_WRONLY);
     if(fd == -1)
         perror("save error");
-    write(fd, buffer, bufsize);
+    int status;
+    status = write(fd, buffer, bufsize);
+    if(status == -1)
+        perror("write error");
     close(fd);
 }
