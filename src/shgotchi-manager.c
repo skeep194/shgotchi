@@ -1,7 +1,6 @@
 /*
 manager program for each tamagotchi
-shgotchi, shgotchi help, shgotchi help -c -> print help message of shgotchi-manager (command)
-shgotchi help -g -> print help message of shgotchi game (game description)
+shgotchi, shgotchi help -> print help message of shgotchi-manager (command)
 shgotchi init -> create folder of tamagotchi's savefile. if exist, ask user for data initialization
 shgotchi ls -> print tamagotchi list
 shgotchi status 1 -> print 1's status (tamagotchi parameter)
@@ -279,7 +278,6 @@ void Shop()
                 user.money -= 500;
                 printf("새 다마고치의 이름은?\n");
                 char buffer[BUFSIZ];
-                //개행문자가 버퍼에 남아있는데 더 깔끔하게 처리 못하겠다..
                 scanf(" %[^\n]", buffer);
                 AppendShgotchiPort(CreateShgotchi(buffer));
             }
@@ -320,7 +318,14 @@ void reset()
 //print help message of shgotchi-manager
 void Help()
 {
-    printf("manager program for each tamagotchi\n");
+    puts("shgotchi, shgotchi help -> 도움말 출력");
+    puts("shgotchi init -> 세이브 디렉토리가 없을 경우 생성, 있을 경우 지울 지 물어봄");
+    puts("shgotchi ls -> 다마고치 리스트 출력");
+    puts("shgotchi status a -> a의 상태 출력");
+    puts("shgotchi echo -> 기본 다마고치의 얼굴 출력 (쉘 화면에 출력하기 위한 용도)");
+    puts("shgotchi ch a -> 기본 다마고치를 a로 바꿈");
+    puts("shgotchi feed a -> a에게 먹이를 먹이기");
+    puts("shgotchi shop -> 상점 열기");
 }
 
 int main(int argc, char *argv[])
